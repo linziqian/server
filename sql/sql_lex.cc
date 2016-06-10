@@ -1455,13 +1455,12 @@ static int lex_one_token(YYSTYPE *yylval, THD *thd)
       if (state_map[(uchar) lip->yyPeek()] == MY_LEX_CMP_OP ||
           state_map[(uchar) lip->yyPeek()] == MY_LEX_LONG_CMP_OP)
         lip->yySkip();
+      lip->next_state= MY_LEX_START;	// Allow signed numbers
       if ((tokval = find_keyword(lip, lip->yyLength() + 1, 0)))
-      {
-	lip->next_state= MY_LEX_START;	// Allow signed numbers
 	return(tokval);
-      }
-      state = MY_LEX_CHAR;		// Something fishy found
-      break;
+      if (lip->yyLength())
+        lip->yyUnget();
+      return(c);
 
     case MY_LEX_LONG_CMP_OP:		// Incomplete comparison operator
       if (state_map[(uchar) lip->yyPeek()] == MY_LEX_CMP_OP ||
@@ -1471,13 +1470,18 @@ static int lex_one_token(YYSTYPE *yylval, THD *thd)
         if (state_map[(uchar) lip->yyPeek()] == MY_LEX_CMP_OP)
           lip->yySkip();
       }
+      lip->next_state= MY_LEX_START;
       if ((tokval = find_keyword(lip, lip->yyLength() + 1, 0)))
-      {
-	lip->next_state= MY_LEX_START;	// Found long op
 	return(tokval);
+      if (lip->yyLength())
+        lip->yyUnget();
+      if (lip->yyLength())
+      {
+        if ((tokval = find_keyword(lip, lip->yyLength() + 1, 0)))
+          return(tokval);
+        lip->yyUnget();
       }
-      state = MY_LEX_CHAR;		// Something fishy found
-      break;
+      return(c);
 
     case MY_LEX_BOOL:
       if (c != lip->yyPeek())
